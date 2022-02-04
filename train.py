@@ -23,7 +23,10 @@ def main():
     opt = Options().parse()
     data = load_data(opt)
     model = load_model(opt, data)
-    model.train()
+    if self.opt.phase=="train":
+        model.train()
+    elif self.opt.phase=="test":
+        model.test()
 
 if __name__ == '__main__':
     main()
