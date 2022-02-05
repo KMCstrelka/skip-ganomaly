@@ -148,7 +148,7 @@ class Skipganomaly(BaseModel):
         self.update_netd()
 
     ##
-    def test(self, plot_hist=False):
+    def test(self, plot_hist=self.opt.histogram):
         """ Test GANomaly model.
 
         Args:
