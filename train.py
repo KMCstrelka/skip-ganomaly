@@ -23,9 +23,9 @@ def main():
     opt = Options().parse()
     data = load_data(opt)
     model = load_model(opt, data)
-    if self.opt.phase=="train":
+    if opt.phase=="train":
         model.train()
-    elif self.opt.phase=="test":
+    elif opt.phase=="test":
         model.test()
 
 if __name__ == '__main__':
