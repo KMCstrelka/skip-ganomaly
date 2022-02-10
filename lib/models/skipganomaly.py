@@ -127,14 +127,14 @@ class Skipganomaly(BaseModel):
 
     def update_netg(self):
         """ Update Generator Network.
-        """       
+        """
         self.optimizer_g.zero_grad()
         self.backward_g()
         self.optimizer_g.step()
 
     def update_netd(self):
         """ Update Discriminator Network.
-        """       
+        """
         self.optimizer_d.zero_grad()
         self.backward_d()
         self.optimizer_d.step()
@@ -148,7 +148,8 @@ class Skipganomaly(BaseModel):
         self.update_netd()
 
     ##
-    def test(self, plot_hist=self.opt.histogram):
+    def test(self):
+        plot_hist=self.opt.histogram
         """ Test GANomaly model.
 
         Args:
