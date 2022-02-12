@@ -92,7 +92,7 @@ class Ganomaly(BaseModel):
         """
         self.err_g_adv = self.opt.w_adv * self.l_adv(self.feat_fake, self.feat_real)
         self.err_g_con = self.opt.w_con * self.l_con(self.fake, self.input)
-        self.err_g_lat = self.opt.w_lat * self.l_enc(self.latent_o, self.latent_i)
+        self.err_g_lat = self.opt.w_lat * self.l_enc(self.latent_o, self.latent_i).detach()
         self.err_g = self.err_g_adv + self.err_g_con + self.err_g_lat
         self.err_g.backward(retain_graph=True)
 
@@ -107,7 +107,7 @@ class Ganomaly(BaseModel):
         # NetD Loss & Backward-Pass
         self.err_d = (self.err_d_real + self.err_d_fake) * 0.5
         self.err_d.backward()
-    
+
     ##
     def optimize_params(self):
         """ Forwardpass, Loss Computation and Backwardpass.
@@ -139,6 +139,7 @@ class Ganomaly(BaseModel):
             IOError: Model weights not found.
         """
         with torch.no_grad():
+            plot_hist=self.opt.histogram
             # Load the weights of netg and netd.
             if self.opt.load_weights:
                 path = "./output/{}/{}/train/weights/netG.pth".format(self.name.lower(), self.opt.dataset)
@@ -192,10 +193,34 @@ class Ganomaly(BaseModel):
             self.times = np.array(self.times)
             self.times = np.mean(self.times[:100] * 1000)
 
+            original_score=list(self.an_scores.cpu())
             # Scale error vector between [0, 1]
             self.an_scores = (self.an_scores - torch.min(self.an_scores)) / (torch.max(self.an_scores) - torch.min(self.an_scores))
             auc = evaluate(self.gt_labels, self.an_scores, metric=self.opt.metric)
             performance = OrderedDict([('Avg Run Time (ms/batch)', self.times), ('AUC', auc)])
+            ##
+            # PLOT HISTOGRAM
+            if plot_hist:
+                plt.ion()
+                # Create data frame for scores and labels.
+                scores['original scores'] =original_score
+                scores['normalized scores'] = self.an_scores.cpu()
+                scores['labels'] = self.gt_labels.cpu()
+                hist = pd.DataFrame.from_dict(scores)
+                hist.to_csv("histogram.csv")
+
+                # Filter normal and abnormal scores.
+                abn_scr = hist.loc[hist.labels == 1]['normalized scores']
+                nrm_scr = hist.loc[hist.labels == 0]['normalized scores']
+
+                # Create figure and plot the distribution.
+                # fig, ax = plt.subplots(figsize=(4,4));
+                sns.distplot(nrm_scr, label=r'Normal Scores')
+                sns.distplot(abn_scr, label=r'Abnormal Scores')
+
+                plt.legend()
+                plt.yticks([])
+                plt.xlabel(r'Anomaly Scores')
 
             if self.opt.display_id > 0 and self.opt.phase == 'test':
                 counter_ratio = float(epoch_iter) / len(self.data.valid.dataset)

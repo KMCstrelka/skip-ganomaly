@@ -105,9 +105,10 @@ class Skipganomaly(BaseModel):
     def backward_g(self):
         """ Backpropagate netg
         """
+        torch_ver=torch.__version__.split('.')
         self.err_g_adv = self.opt.w_adv * self.l_adv(self.pred_fake, self.real_label)
         self.err_g_con = self.opt.w_con * self.l_con(self.fake, self.input)
-        self.err_g_lat = self.opt.w_lat * self.l_lat(self.feat_fake, self.feat_real)
+        self.err_g_lat = self.opt.w_lat * self.l_lat(self.feat_fake, self.feat_real).detach()
 
         self.err_g = self.err_g_adv + self.err_g_con + self.err_g_lat
         self.err_g.backward(retain_graph=True)
@@ -215,7 +216,7 @@ class Skipganomaly(BaseModel):
             # Measure inference time.
             self.times = np.array(self.times)
             self.times = np.mean(self.times[:100] * 1000)
-
+            original_score=list(self.an_scores.cpu())
             # Scale error vector between [0, 1]
             self.an_scores = (self.an_scores - torch.min(self.an_scores)) / \
                              (torch.max(self.an_scores) - torch.min(self.an_scores))
@@ -227,14 +228,15 @@ class Skipganomaly(BaseModel):
             if plot_hist:
                 plt.ion()
                 # Create data frame for scores and labels.
-                scores['scores'] = self.an_scores
-                scores['labels'] = self.gt_labels
+                scores['original scores'] =original_score
+                scores['normalized scores'] = self.an_scores.cpu()
+                scores['labels'] = self.gt_labels.cpu()
                 hist = pd.DataFrame.from_dict(scores)
                 hist.to_csv("histogram.csv")
 
                 # Filter normal and abnormal scores.
-                abn_scr = hist.loc[hist.labels == 1]['scores']
-                nrm_scr = hist.loc[hist.labels == 0]['scores']
+                abn_scr = hist.loc[hist.labels == 1]['normalized scores']
+                nrm_scr = hist.loc[hist.labels == 0]['normalized scores']
 
                 # Create figure and plot the distribution.
                 # fig, ax = plt.subplots(figsize=(4,4));
